@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import argparse
 
 from matplotlib import pyplot
 
@@ -8,6 +9,21 @@ from keras.models import model_from_json
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.utils.np_utils import to_categorical
+
+parser = argparse.ArgumentParser()
+
+#Training or Inference
+parser.add_argument('--mode', type=str, default='infer',
+                    help='train or infer')
+
+parser.add_argument('--test', nargs='*', default=list(),
+					help='List of previous vitals')
+
+FLAGS = parser.parse_args()
+
+# Look_back distance and # of features
+LOOK_BACK = 5
+N_FEATURES = 4
 
 def pre_proc(data, n_in=1, n_out=1, dropnan=True):
 	n_vars = 1 if type(data) is list else data.shape[1]
@@ -52,26 +68,20 @@ def train():
 
 	# Cast all values to float
 	values = values.astype('float32')
-	# Normalize features
-	#scaler = MinMaxScaler(feature_range=(0, 1))
-	#scaled = scaler.fit_transform(values)
-	# Look_back distance and # of features
-	look_back = 5
-	n_features = 4
 	# Pre-process data
-	training = pre_proc(values, look_back, 1)
+	training = pre_proc(values, LOOK_BACK, 1)
 
 	# Divide into training and test sets
 	new_values = training.values
-	n_obvals = look_back * n_features
+	n_obvals = LOOK_BACK * N_FEATURES
 	train = new_values[:9601, :]
 	test = new_values[9601:, :]
 	# Divide into inputs and outputs
-	train_X, train_y = train[:, :n_obvals], train[:, -n_features]
-	test_X, test_y = test[:, :n_obvals], test[:, -n_features]
+	train_X, train_y = train[:, :n_obvals], train[:, -N_FEATURES]
+	test_X, test_y = test[:, :n_obvals], test[:, -N_FEATURES]
 	# Reshape into [samples, timesteps, features]
-	train_X = train_X.reshape((train_X.shape[0], look_back, n_features))
-	test_X = test_X.reshape((test_X.shape[0], look_back, n_features))
+	train_X = train_X.reshape((train_X.shape[0], LOOK_BACK, N_FEATURES))
+	test_X = test_X.reshape((test_X.shape[0], LOOK_BACK, N_FEATURES))
 
 	#Encode train_y, test_y one-hot
 	train_y = to_categorical(train_y)
@@ -92,6 +102,7 @@ def train():
 	pyplot.show()
 
 	model_save(model)
+	print('Finished Training')
 
 def model_load():
     # Reload model and parameters
@@ -106,7 +117,18 @@ def model_load():
 
 def predict(model, currTest):
 	# make a prediction
-	currTest = np.reshape(currTest, (1, 5, 4))
+	currTest = np.reshape(currTest, (1, LOOK_BACK, N_FEATURES))
 	yhat = model.predict_classes(currTest)
 
 	return yhat[0]
+
+if (FLAGS.mode == 'train'):
+	train()
+elif (FLAGS.mode == 'infer'):
+	currModel = model_load()
+	currState = predict(currModel, FLAGS.test)
+	print(currState)
+else:
+	raise ValueError('Unknown Command')
+
+
