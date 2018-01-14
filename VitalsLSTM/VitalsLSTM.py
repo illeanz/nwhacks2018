@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import argparse
+import sys
 
 from matplotlib import pyplot
 
@@ -12,6 +13,7 @@ from keras.utils.np_utils import to_categorical
 
 parser = argparse.ArgumentParser()
 
+'''
 #Training or Inference
 parser.add_argument('--mode', type=str, default='infer',
                     help='train or infer')
@@ -20,6 +22,7 @@ parser.add_argument('--test', nargs='*', default=list(),
 					help='List of previous vitals')
 
 FLAGS = parser.parse_args()
+'''
 
 # Look_back distance and # of features
 LOOK_BACK = 5
@@ -104,24 +107,33 @@ def train():
 	model_save(model)
 	print('Finished Training')
 
-def model_load():
+def model_load(json_path, model_path):
     # Reload model and parameters
-    json_file = open('model.json', 'r')
+    json_file = open(json_path, 'r')
     loaded_model_json = json_file.read()
     json_file.close()
     trained_model = model_from_json(loaded_model_json)
-    trained_model.load_weights("model.h5")
+    trained_model.load_weights(model_path)
     print("Loaded model from disk")
 
     return trained_model
 
-def predict(model, currTest):
+def predict(model, currSet):
+	currTest = pd.read_json(currSet)
+	breathing_rate = currTest['breathing_rate'].tolist()
+	oxygen_saturation = currTest['oxygen_saturation'].tolist()
+	label = currTest['label'].tolist()
+
+	#Concat labels into numpy array
+	np.concatenate(breathing_rate, oxygen_saturation, label)
+
 	# make a prediction
 	currTest = np.reshape(currTest, (1, LOOK_BACK, N_FEATURES))
 	yhat = model.predict_classes(currTest)
 
-	return yhat[0]
+	return yhat
 
+'''
 if (FLAGS.mode == 'train'):
 	train()
 elif (FLAGS.mode == 'infer'):
@@ -130,5 +142,18 @@ elif (FLAGS.mode == 'infer'):
 	print(currState)
 else:
 	raise ValueError('Unknown Command')
+'''
+
+if(sys.argv[1] == "train"):
+	train()
+elif (sys.argv[1] == "infer"):
+	currModel = model_load(sys.argv[3], sys.argv[4])
+	currState = predict(currModel, sys.argv[2])
+	print(currState)
+	sys.stdout.flush()
+else:
+	raise ValueError("UNKNOWN COMMAND")
+
+
 
 
