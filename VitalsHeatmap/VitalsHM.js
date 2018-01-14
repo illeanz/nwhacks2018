@@ -25,11 +25,11 @@ heatmap = new HeatmapOverlay(map,
     //   (there will always be a red spot with useLocalExtremas true)
     "useLocalExtrema": true,
     // which field name in your data represents the lat - default "lat"
-    latField: 'lat',
+    latField: 'Pos_X',
     // which field name in your data represents the lng - default "lng"
-    lngField: 'lng',
+    lngField: 'Pos_Y',
     // which field name in your data represents the data value - default "value"
-    valueField: 'weight'
+    valueField: 'Classification'
   }
 );
 
